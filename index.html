@@ -185,6 +185,17 @@
   .vs{font-family:'Almarai',sans-serif;font-weight:800;color:rgba(251,243,231,.3);font-size:13px;}
 
   .board-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  /* إطار الإحداثيات: زاوية + حروف الأعمدة أعلى + أرقام الصفوف على الجنب */
+  .board-frame{display:grid;grid-template-columns:22px auto;grid-template-rows:22px auto;
+    gap:6px;align-items:center;justify-items:center;}
+  .board-frame .corner{grid-column:1;grid-row:1;}
+  .board-frame .col-labels{grid-column:2;grid-row:1;display:grid;gap:7px;width:100%;padding:0 12px;}
+  .board-frame .row-labels{grid-column:1;grid-row:2;display:grid;gap:7px;height:100%;padding:12px 0;}
+  .board-frame .grid{grid-column:2;grid-row:2;}
+  .coord{font-family:'Almarai',sans-serif;font-weight:800;font-size:13px;
+    color:rgba(251,243,231,.55);display:flex;align-items:center;justify-content:center;
+    text-shadow:0 0 8px rgba(79,216,196,.25);}
+  .coord.hl{color:var(--gold);text-shadow:0 0 10px rgba(242,184,75,.5);}
   .board-label{font-size:12px;color:rgba(251,243,231,.5);letter-spacing:.5px;text-align:center;max-width:420px;}
   .grid{display:grid;gap:7px;padding:12px;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid var(--line);
     box-shadow:inset 0 0 30px rgba(0,0,0,0.35);}
@@ -415,7 +426,12 @@
     <div class="scoreboard" id="scoreboard"></div>
     <div class="board-wrap">
       <div class="board-label" data-i18n="shared_board">اللوحة المشتركة</div>
-      <div class="grid" id="grid"></div>
+      <div class="board-frame" id="boardFrame">
+        <div class="corner"></div>
+        <div class="col-labels" id="colLabels"></div>
+        <div class="row-labels" id="rowLabels"></div>
+        <div class="grid" id="grid"></div>
+      </div>
       <div class="legend">
         <span><i class="i1"></i> <span data-i18n="ship1_legend">سفينة ١</span></span>
         <span><i class="i2"></i> <span data-i18n="ship2_legend">سفينة ٢</span></span>
