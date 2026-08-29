@@ -76,6 +76,7 @@ $('btnAdminExit').onclick = ()=> goto('introScreen');
 function tryAdminLogin(){
   if($('adminPassInput').value === ADMIN_PASSWORD){
     goto('adminPanelScreen');
+    if(!getCategory(adminActiveCat) && CATEGORIES.length) adminActiveCat=CATEGORIES[0].id;
     populateAdminCatSelect();
     renderAdminBank();
   } else {
@@ -84,37 +85,61 @@ function tryAdminLogin(){
 }
 function populateAdminCatSelect(){
   const sel=$('adminCatSelect'); sel.innerHTML='';
-  Object.keys(QUESTION_BANK).forEach(key=>{
-    const o=document.createElement('option'); o.value=key; o.textContent=catLabel(key); sel.appendChild(o);
+  CATEGORIES.forEach(c=>{
+    const o=document.createElement('option'); o.value=c.id; o.textContent=catLabel(c.id); sel.appendChild(o);
   });
 }
 function renderAdminBankCats(){
   const wrap=$('adminBankCats'); wrap.innerHTML='';
-  Object.keys(QUESTION_BANK).forEach(key=>{
+  CATEGORIES.forEach(c=>{
     const b=document.createElement('button');
-    b.className='cat-btn'+(key===adminActiveCat?' active':'');
-    b.textContent=catLabel(key)+' ('+QUESTION_BANK[key].questions.length+')';
-    b.onclick=()=>{ adminActiveCat=key; renderAdminBank(); };
+    b.className='cat-btn'+(c.id===adminActiveCat?' active':'');
+    b.textContent=catLabel(c.id)+' ('+c.questions.length+')';
+    b.onclick=()=>{ adminActiveCat=c.id; renderAdminBank(); };
     wrap.appendChild(b);
   });
+  // زر إضافة فئة جديدة
+  const addBtn=document.createElement('button');
+  addBtn.className='cat-btn'; addBtn.style.borderStyle='dashed';
+  addBtn.textContent='+ '+t('add_category');
+  addBtn.onclick=()=>{
+    const nameAr=prompt(t('category_name_prompt'));
+    if(nameAr && nameAr.trim()){
+      const id=addCategory(nameAr.trim(), nameAr.trim());
+      adminActiveCat=id;
+      populateAdminCatSelect();
+      renderAdminBank();
+    }
+  };
+  wrap.appendChild(addBtn);
 }
 function renderAdminBank(){
   renderAdminBankCats();
+  const cat=getCategory(adminActiveCat);
   const list=$('adminBankList'); list.innerHTML='';
-  const qs=QUESTION_BANK[adminActiveCat].questions;
-  qs.forEach(item=>{
+
+  // شريط أدوات الفئة الحالية (إعادة تسمية / حذف الفئة)
+  const catBar=$('adminCatBar');
+  if(cat){
+    catBar.style.display='flex';
+    $('adminCatCurrentName').textContent=catLabel(cat.id);
+  } else {
+    catBar.style.display='none';
+  }
+
+  if(!cat){ list.innerHTML='<div class="p-hint">'+t('no_categories')+'</div>'; return; }
+
+  cat.questions.forEach(item=>{
     const row=document.createElement('div');
-    row.className='q-item'+(item.__custom?'':' builtin');
+    row.className='q-item';
     const left=document.createElement('div'); left.className='q-txt';
     left.innerHTML=`<div>${escapeHtml(item.q)}</div><div class="q-ans">${escapeHtml(item.a)}</div>`;
-    const badge=document.createElement('span'); badge.className='badge';
-    badge.textContent=item.__custom?'خاص':'مدمج';
     const del=document.createElement('button'); del.className='del'; del.textContent='✕';
-    if(item.__custom){ del.onclick=()=>{ removeCustomQuestion(adminActiveCat, item.__id); renderAdminBank(); }; }
-    row.appendChild(left); row.appendChild(badge); row.appendChild(del);
+    del.onclick=()=>{ removeQuestion(adminActiveCat, item.id); renderAdminBank(); populateAdminCatSelect(); };
+    row.appendChild(left); row.appendChild(del);
     list.appendChild(row);
   });
-  if(qs.length===0){ list.innerHTML='<div class="p-hint">—</div>'; }
+  if(cat.questions.length===0){ list.innerHTML='<div class="p-hint">—</div>'; }
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -123,16 +148,31 @@ $('btnAdminAdd').onclick = ()=>{
   const q=$('adminQInput').value.trim();
   const a=$('adminAInput').value.trim();
   if(!q||!a){ alert(t('fill_both')); return; }
-  addCustomQuestion(cat,q,a);
+  addQuestion(cat,q,a);
   $('adminQInput').value=''; $('adminAInput').value='';
   adminActiveCat=cat;
-  renderAdminBank();
+  renderAdminBank(); populateAdminCatSelect();
+};
+$('btnRenameCat').onclick = ()=>{
+  const cat=getCategory(adminActiveCat); if(!cat) return;
+  const newName=prompt(t('category_name_prompt'), cat.name_ar);
+  if(newName && newName.trim()){
+    renameCategory(adminActiveCat, newName.trim(), newName.trim());
+    renderAdminBank(); populateAdminCatSelect();
+  }
+};
+$('btnDeleteCat').onclick = ()=>{
+  const cat=getCategory(adminActiveCat); if(!cat) return;
+  if(!confirm(t('confirm_delete_cat').replace('{name}', catLabel(cat.id)))) return;
+  removeCategory(adminActiveCat);
+  adminActiveCat = CATEGORIES.length ? CATEGORIES[0].id : null;
+  renderAdminBank(); populateAdminCatSelect();
 };
 $('btnExport').onclick = ()=>{
-  const data=exportCustomQuestionsJSON();
+  const data=exportBankJSON();
   const blob=new Blob([data],{type:'application/json'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='ships-questions-backup.json';
+  const a=document.createElement('a'); a.href=url; a.download='ships-bank-backup.json';
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 };
 $('btnImport').onclick = ()=> $('importFile').click();
@@ -141,9 +181,11 @@ $('importFile').onchange = (e)=>{
   const r=new FileReader();
   r.onload=()=>{
     try{
-      const n=importCustomQuestionsJSON(r.result);
+      const replace = confirm(t('import_mode_prompt'));
+      const res=importBankJSON(r.result, replace?'replace':'merge');
+      if(!getCategory(adminActiveCat) && CATEGORIES.length) adminActiveCat=CATEGORIES[0].id;
       renderAdminBank(); populateAdminCatSelect();
-      alert(n>0 ? t('imported_ok').replace('{n}',n) : t('imported_dup'));
+      alert(t('imported_ok').replace('{n}', res.questions));
     }catch(err){ alert(t('import_fail')); }
   };
   r.readAsText(file,'utf-8'); e.target.value='';
