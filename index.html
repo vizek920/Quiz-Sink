@@ -347,6 +347,11 @@
     <div class="card">
       <h2 data-i18n="question_bank">بنك الأسئلة</h2>
       <div class="seg" id="adminBankCats"></div>
+      <div id="adminCatBar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line);">
+        <span style="font-size:12px;color:rgba(251,243,231,.55);"><span data-i18n="current_category">الفئة الحالية</span>: <b id="adminCatCurrentName" style="color:var(--gold);"></b></span>
+        <button class="btn" id="btnRenameCat" style="padding:6px 12px;font-size:12px;">✏️ <span data-i18n="rename_category">إعادة تسمية</span></button>
+        <button class="btn danger" id="btnDeleteCat" style="padding:6px 12px;font-size:12px;">🗑 <span data-i18n="delete_category">حذف الفئة</span></button>
+      </div>
       <div class="q-list" id="adminBankList"></div>
     </div>
   </div>
