@@ -7,7 +7,6 @@
 const ADMIN_PASSWORD = "vizek2026";   // ← غيّر كلمة مرور الأدمن من هنا
 
 const STORAGE_KEY   = 'bsq2_state';
-const CUSTOM_KEY    = 'bsq2_custom_questions';
 const CHANNEL_NAME  = 'bsq2_channel';
 const LANG_KEY      = 'bsq2_lang';
 
@@ -97,6 +96,14 @@ const I18N = {
     fill_both:'اكتب نص السؤال والإجابة',
     to_win:'نقاط الفوز',
     points:'نقطة',
+    add_category:'فئة جديدة',
+    category_name_prompt:'اكتب اسم الفئة:',
+    no_categories:'لا توجد فئات — أضف فئة جديدة',
+    rename_category:'إعادة تسمية',
+    delete_category:'حذف الفئة',
+    confirm_delete_cat:'حذف الفئة "{name}" وكل أسئلتها؟',
+    current_category:'الفئة الحالية',
+    import_mode_prompt:'اضغط "موافق" لاستبدال كل البنك بالملف، أو "إلغاء" للدمج (إضافة بدون حذف).',
   },
   en: {
     dir:'ltr',
@@ -174,6 +181,14 @@ const I18N = {
     fill_both:'Enter both question and answer',
     to_win:'Points to win',
     points:'pts',
+    add_category:'New Category',
+    category_name_prompt:'Enter category name:',
+    no_categories:'No categories — add a new one',
+    rename_category:'Rename',
+    delete_category:'Delete Category',
+    confirm_delete_cat:'Delete category "{name}" and all its questions?',
+    current_category:'Current category',
+    import_mode_prompt:'Press "OK" to replace the whole bank, or "Cancel" to merge (add without deleting).',
   }
 };
 
@@ -186,63 +201,112 @@ function setLang(lang){
   try{ localStorage.setItem(LANG_KEY, lang); }catch(e){}
 }
 
-/* ====================== بنك الأسئلة ====================== */
-const QUESTION_BANK = {
-  general: { label_ar:'عام', label_en:'General', questions:[
-    { q:'ما هي أكبر قارة في العالم من حيث المساحة؟', a:'قارة آسيا' },
-    { q:'ما هو أطول نهر في العالم؟', a:'نهر النيل' },
-    { q:'ما هي عاصمة اليابان؟', a:'طوكيو' },
-    { q:'كم عدد قارات العالم؟', a:'سبع قارات' },
-    { q:'ما هي أصغر دولة في العالم من حيث المساحة؟', a:'الفاتيكان' },
-    { q:'ما هي عاصمة أستراليا؟', a:'كانبرا' },
-    { q:'ما هو أعلى جبل في العالم؟', a:'جبل إفرست' },
-    { q:'ما هي أكبر صحراء حارة في العالم؟', a:'الصحراء الكبرى' },
-    { q:'في أي قارة تقع أهرامات الجيزة؟', a:'قارة أفريقيا (مصر)' },
-    { q:'ما هي أكبر دولة في العالم من حيث المساحة؟', a:'روسيا' },
-    { q:'ما اسم أطول سور بناه الإنسان؟', a:'سور الصين العظيم' },
-    { q:'ما اسم أشهر برج في باريس؟', a:'برج إيفل' },
-  ]},
-  sports: { label_ar:'رياضة', label_en:'Sports', questions:[
-    { q:'كم عدد لاعبي فريق كرة القدم داخل الملعب؟', a:'أحد عشر لاعبًا' },
-    { q:'في أي مدينة أُقيمت أول دورة أولمبية حديثة؟', a:'أثينا' },
-    { q:'كل كم سنة تُقام الأولمبياد الصيفية؟', a:'كل أربع سنوات' },
-    { q:'ما اسم كأس أبطال أوروبا لكرة القدم؟', a:'دوري أبطال أوروبا' },
-    { q:'كم عدد لاعبي الكرة الطائرة داخل الملعب؟', a:'ستة لاعبين' },
-    { q:'ما الدولة المضيفة لكأس العالم 2022؟', a:'قطر' },
-    { q:'في أي رياضة تُقام بطولة ويمبلدون؟', a:'التنس' },
-    { q:'كم عدد حلقات الشعار الأولمبي؟', a:'خمس حلقات' },
-    { q:'ما اسم أشهر سباق دراجات في فرنسا؟', a:'طواف فرنسا' },
-  ]},
-  science: { label_ar:'علوم', label_en:'Science', questions:[
-    { q:'ما هو الكوكب الأقرب إلى الشمس؟', a:'عطارد' },
-    { q:'ما الغاز الذي يتنفسه الإنسان للحياة؟', a:'الأكسجين' },
-    { q:'من مخترع المصباح الكهربائي؟', a:'توماس إديسون' },
-    { q:'ما الرمز الكيميائي للماء؟', a:'H2O' },
-    { q:'من صاحب نظرية الجاذبية؟', a:'إسحاق نيوتن' },
-    { q:'كم عدد كواكب المجموعة الشمسية؟', a:'ثمانية كواكب' },
-    { q:'ما العضو المسؤول عن ضخ الدم؟', a:'القلب' },
-    { q:'كم عدد عظام جسم الإنسان البالغ تقريبًا؟', a:'206 عظمة' },
-  ]},
-  religious: { label_ar:'ديني', label_en:'Religious', questions:[
-    { q:'كم عدد أركان الإسلام؟', a:'خمسة أركان' },
-    { q:'ما أول بيت وُضع للناس؟', a:'الكعبة المشرفة' },
-    { q:'كم عدد سور القرآن الكريم؟', a:'مئة وأربع عشرة سورة' },
-    { q:'كم عدد الصلوات المفروضة يوميًا؟', a:'خمس صلوات' },
-    { q:'ما الشعيرة التي تُؤدى في مكة سنويًا؟', a:'الحج' },
-  ]},
-  entertainment: { label_ar:'ترفيهي', label_en:'Fun', questions:[
-    { q:'ما الحيوان الملقّب بملك الغابة؟', a:'الأسد' },
-    { q:'كم عدد ألوان قوس قزح؟', a:'سبعة ألوان' },
-    { q:'ما أسرع حيوان بري في العالم؟', a:'الفهد (الشيتا)' },
-    { q:'ما أكبر محيط في العالم؟', a:'المحيط الهادئ' },
-    { q:'ما أكبر حيوان ثديي في العالم؟', a:'الحوت الأزرق' },
-    { q:'كم عدد أوتار الغيتار الكلاسيكي؟', a:'ستة أوتار' },
-  ]},
-};
-function catLabel(key){
-  const c = QUESTION_BANK[key];
-  if(!c) return key;
-  return CURRENT_LANG==='en' ? c.label_en : c.label_ar;
+/* ====================== بنك الأسئلة (فئات ديناميكية مخزّنة) ====================== */
+/* الفئات الآن تُخزَّن بالكامل في المتصفح ويتحكم بها المستخدم من لوحة الأدمن.
+   البنية: [{ id, name_ar, name_en, questions:[{id,q,a}] }] */
+const CATEGORIES_KEY = 'bsq2_categories';
+
+/* فئات ابتدائية فارغة (بدون أسئلة مدمجة) — تُنشأ فقط أول مرة، ويقدر المستخدم يعدّلها/يحذفها */
+function seedCategories(){
+  return [
+    { id:'general',       name_ar:'عام',    name_en:'General',   questions:[] },
+    { id:'sports',        name_ar:'رياضة',  name_en:'Sports',    questions:[] },
+    { id:'science',       name_ar:'علوم',   name_en:'Science',   questions:[] },
+    { id:'religious',     name_ar:'ديني',   name_en:'Religious', questions:[] },
+    { id:'entertainment', name_ar:'ترفيهي', name_en:'Fun',       questions:[] },
+  ];
+}
+
+let CATEGORIES = [];
+function loadCategories(){
+  try{
+    const raw = localStorage.getItem(CATEGORIES_KEY);
+    if(raw){ CATEGORIES = JSON.parse(raw); return CATEGORIES; }
+  }catch(e){}
+  CATEGORIES = seedCategories();
+  saveCategories();
+  return CATEGORIES;
+}
+function saveCategories(){
+  try{ localStorage.setItem(CATEGORIES_KEY, JSON.stringify(CATEGORIES)); }catch(e){}
+}
+function getCategory(id){ return CATEGORIES.find(c=>c.id===id); }
+function catLabel(id){
+  const c=getCategory(id);
+  if(!c) return id;
+  return CURRENT_LANG==='en' ? (c.name_en||c.name_ar) : (c.name_ar||c.name_en);
+}
+
+/* ---- إدارة الفئات ---- */
+function addCategory(nameAr, nameEn){
+  const id = 'cat_'+uid();
+  CATEGORIES.push({ id, name_ar:nameAr||nameEn||id, name_en:nameEn||nameAr||id, questions:[] });
+  saveCategories();
+  return id;
+}
+function renameCategory(id, nameAr, nameEn){
+  const c=getCategory(id); if(!c) return;
+  if(nameAr!=null) c.name_ar=nameAr;
+  if(nameEn!=null) c.name_en=nameEn;
+  saveCategories();
+}
+function removeCategory(id){
+  CATEGORIES = CATEGORIES.filter(c=>c.id!==id);
+  saveCategories();
+}
+
+/* ---- إدارة الأسئلة داخل فئة ---- */
+function addQuestion(catId, q, a){
+  const c=getCategory(catId); if(!c) return;
+  c.questions.push({ id:uid(), q, a });
+  saveCategories();
+}
+function removeQuestion(catId, qId){
+  const c=getCategory(catId); if(!c) return;
+  c.questions = c.questions.filter(x=>x.id!==qId);
+  saveCategories();
+}
+
+/* ---- تصدير/استيراد كامل بنك الأسئلة (فئات + أسئلة) ---- */
+function exportBankJSON(){ return JSON.stringify(CATEGORIES, null, 2); }
+function importBankJSON(text, mode){
+  // mode: 'merge' (يضيف بدون حذف) أو 'replace' (يستبدل كل شيء)
+  let parsed;
+  try{ parsed=JSON.parse(text); }catch(e){ throw new Error('bad'); }
+  if(!Array.isArray(parsed)) throw new Error('bad');
+  // تحقّق بسيط من الشكل
+  const clean = parsed.filter(c=>c && c.id).map(c=>({
+    id:String(c.id),
+    name_ar: c.name_ar || c.name_en || String(c.id),
+    name_en: c.name_en || c.name_ar || String(c.id),
+    questions: Array.isArray(c.questions) ? c.questions
+      .filter(x=>x && x.q && x.a)
+      .map(x=>({ id:x.id||uid(), q:String(x.q), a:String(x.a) })) : []
+  }));
+  if(mode==='replace'){
+    CATEGORIES = clean;
+    saveCategories();
+    return { cats:clean.length, questions:clean.reduce((n,c)=>n+c.questions.length,0) };
+  }
+  // merge
+  let addedQ=0, addedC=0;
+  clean.forEach(inc=>{
+    let existing = getCategory(inc.id) || CATEGORIES.find(c=>c.name_ar===inc.name_ar);
+    if(!existing){ CATEGORIES.push({...inc, questions:[]}); existing=CATEGORIES[CATEGORIES.length-1]; addedC++; }
+    inc.questions.forEach(q=>{
+      if(!existing.questions.some(e=>e.q===q.q && e.a===q.a)){ existing.questions.push({id:q.id||uid(),q:q.q,a:q.a}); addedQ++; }
+    });
+  });
+  saveCategories();
+  return { cats:addedC, questions:addedQ };
+}
+
+function allQuestionsFlat(){
+  const out=[];
+  CATEGORIES.forEach(c=>{
+    c.questions.forEach(item=> out.push({ cat:c.id, q:item.q, a:item.a, key:c.id+'#'+item.id }));
+  });
+  return out;
 }
 
 /* ====================== أدوات ====================== */
@@ -255,64 +319,6 @@ function shuffle(arr){
   return a;
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
-
-/* ====================== أسئلة المستخدم الخاصة ====================== */
-function loadCustomQuestions(){
-  try{ const raw=localStorage.getItem(CUSTOM_KEY); if(raw) return JSON.parse(raw); }catch(e){}
-  return {};
-}
-function saveCustomQuestionsMap(map){
-  try{ localStorage.setItem(CUSTOM_KEY, JSON.stringify(map)); }catch(e){}
-}
-function mergeCustomIntoBank(){
-  const custom = loadCustomQuestions();
-  Object.keys(QUESTION_BANK).forEach(key=>{
-    QUESTION_BANK[key].questions = QUESTION_BANK[key].questions.filter(x=>!x.__custom);
-    (custom[key]||[]).forEach(item=> QUESTION_BANK[key].questions.push({q:item.q,a:item.a,__custom:true,__id:item.id}));
-  });
-}
-function addCustomQuestion(cat,q,a){
-  if(!QUESTION_BANK[cat]) return;
-  const custom = loadCustomQuestions();
-  if(!custom[cat]) custom[cat]=[];
-  custom[cat].push({id:uid(),q,a});
-  saveCustomQuestionsMap(custom);
-  mergeCustomIntoBank();
-}
-function removeCustomQuestion(cat,id){
-  const custom = loadCustomQuestions();
-  if(custom[cat]) custom[cat]=custom[cat].filter(x=>x.id!==id);
-  saveCustomQuestionsMap(custom);
-  mergeCustomIntoBank();
-}
-function exportCustomQuestionsJSON(){ return JSON.stringify(loadCustomQuestions(),null,2); }
-function importCustomQuestionsJSON(text){
-  let parsed;
-  try{ parsed=JSON.parse(text); }catch(e){ throw new Error('bad'); }
-  const existing = loadCustomQuestions();
-  let added=0;
-  Object.keys(parsed).forEach(cat=>{
-    if(!QUESTION_BANK[cat]) return;
-    if(!existing[cat]) existing[cat]=[];
-    (parsed[cat]||[]).forEach(item=>{
-      if(!item||!item.q||!item.a) return;
-      if(!existing[cat].some(e=>e.q===item.q&&e.a===item.a)){
-        existing[cat].push({id:item.id||uid(),q:item.q,a:item.a});
-        added++;
-      }
-    });
-  });
-  saveCustomQuestionsMap(existing);
-  mergeCustomIntoBank();
-  return added;
-}
-function allQuestionsFlat(){
-  const out=[];
-  Object.keys(QUESTION_BANK).forEach(cat=>{
-    QUESTION_BANK[cat].questions.forEach((item,i)=> out.push({cat, idx:i, q:item.q, a:item.a, key:cat+'#'+item.q}));
-  });
-  return out;
-}
 
 /* ====================== توليد اللوحة ====================== */
 /* ship1 = 3 خلايا متفرقة، ship2 = 2 خلايا متفرقة */
@@ -569,4 +575,4 @@ const Sound={
   timeup(){ beep(200,0.5,'sawtooth',0.2); },
 };
 
-mergeCustomIntoBank();
+loadCategories();
