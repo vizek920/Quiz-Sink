@@ -279,18 +279,39 @@ $('btnEnableSound').onclick = ()=>{
    شاشة اللعب
    ============================================================ */
 function boardCols(){ return state ? state.config.boardSize : 4; }
+function colLetter(i){
+  // A..Z ثم AA, AB ... (كافٍ لأي حجم لوحة)
+  let s=''; i=i;
+  do { s=String.fromCharCode(65+(i%26))+s; i=Math.floor(i/26)-1; } while(i>=0);
+  return s;
+}
 function buildGrid(){
   const g=$('grid');
   const size=state.config.boardSize;
-  g.style.gridTemplateColumns=`repeat(${size},minmax(46px,74px))`;
-  g.style.gridTemplateRows=`repeat(${size},minmax(46px,74px))`;
+  const cellTpl=`repeat(${size},minmax(46px,74px))`;
+  g.style.gridTemplateColumns=cellTpl;
+  g.style.gridTemplateRows=cellTpl;
   g.innerHTML='';
   for(let i=0;i<size*size;i++){
     const c=document.createElement('div'); c.className='cell'; c.dataset.i=i;
     g.appendChild(c);
   }
+  // حروف الأعمدة (A B C …) وأرقام الصفوف (1 2 3 …)
+  const colWrap=$('colLabels'), rowWrap=$('rowLabels');
+  colWrap.style.gridTemplateColumns=cellTpl;
+  rowWrap.style.gridTemplateRows=cellTpl;
+  colWrap.innerHTML=''; rowWrap.innerHTML='';
+  for(let c=0;c<size;c++){
+    const el=document.createElement('div'); el.className='coord'; el.dataset.col=c; el.textContent=colLetter(c);
+    colWrap.appendChild(el);
+  }
+  for(let r=0;r<size;r++){
+    const el=document.createElement('div'); el.className='coord'; el.dataset.row=r; el.textContent=(r+1);
+    rowWrap.appendChild(el);
+  }
 }
 function cell(i){ return document.querySelector('.grid .cell[data-i="'+i+'"]'); }
+function cellCoord(i){ const size=state.config.boardSize; return colLetter(i%size)+(Math.floor(i/size)+1); }
 
 function teamColor(k){ return state.teams[k] ? state.teams[k].color : '#ccc'; }
 function teamName(k){ return state.teams[k] ? state.teams[k].name : k; }
@@ -413,8 +434,18 @@ function renderBoard(){
     else if(state.phase==='attacking'){
       c.classList.add('clickable');
       c.onclick=()=> attackClick(i);
+      const size=state.config.boardSize;
+      const col=i%size, row=Math.floor(i/size);
+      c.onmouseenter=()=> highlightCoord(col,row,true);
+      c.onmouseleave=()=> highlightCoord(col,row,false);
     }
   }
+}
+function highlightCoord(col,row,on){
+  const cl=document.querySelector('#colLabels .coord[data-col="'+col+'"]');
+  const rl=document.querySelector('#rowLabels .coord[data-row="'+row+'"]');
+  if(cl) cl.classList.toggle('hl',on);
+  if(rl) rl.classList.toggle('hl',on);
 }
 
 function attackClick(i){
